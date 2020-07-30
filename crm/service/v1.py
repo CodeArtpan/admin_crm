@@ -1,15 +1,28 @@
 from django.urls import path, re_path
-from django.shortcuts import HttpResponse
+from django.shortcuts import render, HttpResponse
 
 
 class CrmSetting(object):
+    """
+    基础配置类
+    """
+    list_display = []
+
     def __init__(self, model_class, crm_site):
         self.model_class = model_class
         self.crm_site = crm_site
 
     def changelist_view(self, request, *args, **kwargs):
-        print(self.model_class)
-        return HttpResponse('列表页面')
+        def headers():
+            if not self.list_display:
+                yield self.model_class._meta.model_name
+            else:
+                for v in self.list_display:
+                    yield self.model_class._meta.get_field(v).verbose_name if isinstance(v, str) else v(self)
+        context = {
+            'headers': headers(),
+        }
+        return render(request, 'changelist.html', context)
 
     def add_view(self, request, *args, **kwargs):
         return HttpResponse('添加页面')
@@ -27,7 +40,12 @@ class CrmSetting(object):
             re_path(r'^(.+)/delete/$', self.delete_view),
             re_path(r'^(.+)/change/$', self.change_view),
         ]
+        url_patterns += self.extra_urls()
         return url_patterns
+
+    def extra_urls(self):
+        url = []
+        return url
 
     @property
     def urls(self):
@@ -58,7 +76,7 @@ class CrmSite(object):
 
         for model_class, model_setting_obj in self._registry.items():
             url_patterns += [
-                path('%s/%s/' % (model_class._meta.app_label, model_class._meta.model_name,), model_setting_obj.urls)
+                path('%s/%s/' % (model_class._meta.app_label, model_class._meta.model_name), model_setting_obj.urls)
             ]
         return url_patterns
 
