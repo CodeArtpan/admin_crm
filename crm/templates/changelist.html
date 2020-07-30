@@ -1,3 +1,4 @@
+{% load data_list %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,18 +9,7 @@
 <body>
 
 <div class="container">
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                {% for v in headers %}
-                    <th>{{ v }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-
-        </tbody>
-    </table>
+    {% show_data_list cl %}
 </div>
 
 </body>

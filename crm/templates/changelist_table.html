@@ -1,0 +1,19 @@
+<table class="table table-bordered table-hover">
+    <thead>
+    <tr>
+        {% for v in headers %}
+            <th>{{ v }}</th>
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in body %}
+        <tr>
+            {% for field in row %}
+                <td>{{ field }}</td>
+            {% endfor %}
+        </tr>
+    {% endfor %}
+
+    </tbody>
+</table>

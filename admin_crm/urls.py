@@ -16,6 +16,7 @@ Including another URLconf
 from crm.service import v1
 from django.urls import path
 
+
 urlpatterns = [
     path('crm/', v1.site.urls),
 ]
