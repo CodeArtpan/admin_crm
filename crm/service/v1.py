@@ -2,6 +2,8 @@ from django.urls import path, re_path
 from django.shortcuts import render, HttpResponse
 from django.utils.safestring import mark_safe
 from django.urls import reverse
+from utils.page import Pagination
+import copy
 
 
 class ChangeList(object):
@@ -9,10 +11,21 @@ class ChangeList(object):
     分装列表页面需要的数据
     """
     def __init__(self, data_list, model_config_obj):
-        self.data_list = data_list
         self.model_config_obj = model_config_obj
         self.list_display = model_config_obj.get_list_display()
         self.actions = model_config_obj.get_actions()
+        self.data_list = data_list
+
+        request_get = copy.deepcopy(model_config_obj.request.GET)
+        request_get._mutable = True
+        page = Pagination(
+            current_page=model_config_obj.request.GET.get('page'),
+            total_item_count=data_list.count(),
+            base_url=model_config_obj.request.path_info,
+            request_params=request_get
+        )
+        self.data_list = data_list[page.start:page.end]
+        self.page_html = page.page_html()
 
     def add_btn_html(self):
         add_html = '<a href="%s" class="btn btn-xs btn-success">添加</a>'

@@ -12,6 +12,11 @@ class Permission(object):
 class UserInfoConfig(v1.CrmSetting):
     list_display = ['id', 'username', 'password']
 
+    def initial(self):
+        pass
+    initial.short_desc = '初始化'
+    actions = [initial, ]
+
 
 class UserGroupConfig(Permission, v1.CrmSetting):
     list_display = ['id', 'title']
