@@ -9,10 +9,14 @@
 <body>
 
 <div class="container">
-    {% if cl.model_config_obj.get_show_add_btn%}
-        {{ cl.add_btn_html }}
-    {% endif %}
-    {% show_data_list cl %}
+    <form method="post" class="form-horizontal">
+        {% csrf_token %}
+        {% show_action_list cl %}
+        {% if cl.model_config_obj.get_show_add_btn %}
+            {{ cl.add_btn_html }}
+        {% endif %} 
+        {% show_data_list cl %}
+    </form>
 </div>
 
 </body>

@@ -12,6 +12,7 @@ class ChangeList(object):
         self.data_list = data_list
         self.model_config_obj = model_config_obj
         self.list_display = model_config_obj.get_list_display()
+        self.actions = model_config_obj.get_actions()
 
     def add_btn_html(self):
         add_html = '<a href="%s" class="btn btn-xs btn-success">添加</a>'
@@ -21,20 +22,25 @@ class ChangeList(object):
         return mark_safe(add_html % add_url)
 
 
-
-
 class CrmSetting(object):
     """
     基础配置类
     """
     list_display = []
     show_add_btn = True
+    actions = []
 
     def __init__(self, model_class, crm_site):
         self.model_class = model_class
         self.crm_site = crm_site
 
     def changelist_view(self, request, *args, **kwargs):
+        self.request = request
+        if request.method == 'POST':
+            action_name = request.POST.get('action')
+            action_func = getattr(self, action_name, None)
+            if action_func:
+                action_func()
         data_list = self.model_class.objects.all()
         cl = ChangeList(data_list, self)
         context = {'cl': cl}
@@ -43,18 +49,15 @@ class CrmSetting(object):
     def checkbox_html(self, obj=None, is_header=False):
         if is_header:
             return '选择'
-        return mark_safe('<input type="checkbox" id="%s">' % obj.pk)
+        return mark_safe('<input type="checkbox" value="%s" name="pk">' % obj.pk)
 
     def option_html(self, obj=None, is_header=False):
         if is_header:
             return '操作'
         tpl = "<a href='%s' class='btn btn-xs btn-info'>编辑</a> |  \
                <a href='%s' class='btn btn-xs btn-danger'>删除</a>"\
-            % (reverse('crm:app01_userinfo_change', args=(obj.pk, )), reverse('crm:app01_userinfo_delete', args=(obj.pk,)))
+            % (reverse('crm:app01_userinfo_change', args=(obj.pk,)), reverse('crm:app01_userinfo_delete', args=(obj.pk,)))
         return mark_safe(tpl)
-
-    def get_show_add_btn(self):
-        return self.show_add_btn
 
     def get_list_display(self):
         temp = []
@@ -62,6 +65,20 @@ class CrmSetting(object):
             temp += self.list_display
             temp.insert(0, CrmSetting.checkbox_html)
             temp.append(CrmSetting.option_html)
+        return temp
+
+    def get_show_add_btn(self):
+        return self.show_add_btn
+
+    def multi_del(self):
+        pk_list = [int(pk)for pk in self.request.POST.getlist('pk')]
+        self.model_class.objects.filter(id__in=pk_list).delete()
+
+    multi_del.short_desc = '批量删除'
+
+    def get_actions(self):
+        temp = [CrmSetting.multi_del, ]
+        temp += self.actions
         return temp
 
     def add_view(self, request, *args, **kwargs):

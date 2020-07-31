@@ -25,3 +25,11 @@ def show_data_list(cl):
                 yield [str(row), ]
 
     return {'headers': headers(), 'body': body()}
+
+
+@register.inclusion_tag('changelist_action.html')
+def show_action_list(cl):
+    def temp_gen(cl):
+        for item in cl.actions:
+            yield item.__name__, item.short_desc
+    return {'actions': temp_gen(cl)}
