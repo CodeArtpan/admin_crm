@@ -9,6 +9,9 @@
 <body>
 
 <div class="container">
+    {% if cl.model_config_obj.get_show_add_btn%}
+        {{ cl.add_btn_html }}
+    {% endif %}
     {% show_data_list cl %}
 </div>
 

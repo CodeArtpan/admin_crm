@@ -1,12 +1,26 @@
 from django.urls import path, re_path
 from django.shortcuts import render, HttpResponse
+from django.utils.safestring import mark_safe
+from django.urls import reverse
 
 
 class ChangeList(object):
-    def __init__(self, data_list, list_display, model_config_obj):
+    """
+    分装列表页面需要的数据
+    """
+    def __init__(self, data_list, model_config_obj):
         self.data_list = data_list
-        self.list_display = list_display
         self.model_config_obj = model_config_obj
+        self.list_display = model_config_obj.get_list_display()
+
+    def add_btn_html(self):
+        add_html = '<a href="%s" class="btn btn-xs btn-success">添加</a>'
+        app_model_name = self.model_config_obj.model_class._meta.app_label, \
+                         self.model_config_obj.model_class._meta.model_name
+        add_url = reverse('crm:%s_%s_add' % app_model_name)
+        return mark_safe(add_html % add_url)
+
+
 
 
 class CrmSetting(object):
@@ -14,6 +28,7 @@ class CrmSetting(object):
     基础配置类
     """
     list_display = []
+    show_add_btn = True
 
     def __init__(self, model_class, crm_site):
         self.model_class = model_class
@@ -21,9 +36,33 @@ class CrmSetting(object):
 
     def changelist_view(self, request, *args, **kwargs):
         data_list = self.model_class.objects.all()
-        cl = ChangeList(data_list, self.list_display, self)
+        cl = ChangeList(data_list, self)
         context = {'cl': cl}
         return render(request, 'changelist.html', context)
+
+    def checkbox_html(self, obj=None, is_header=False):
+        if is_header:
+            return '选择'
+        return mark_safe('<input type="checkbox" id="%s">' % obj.pk)
+
+    def option_html(self, obj=None, is_header=False):
+        if is_header:
+            return '操作'
+        tpl = "<a href='%s' class='btn btn-xs btn-info'>编辑</a> |  \
+               <a href='%s' class='btn btn-xs btn-danger'>删除</a>"\
+            % (reverse('crm:app01_userinfo_change', args=(obj.pk, )), reverse('crm:app01_userinfo_delete', args=(obj.pk,)))
+        return mark_safe(tpl)
+
+    def get_show_add_btn(self):
+        return self.show_add_btn
+
+    def get_list_display(self):
+        temp = []
+        if self.list_display:
+            temp += self.list_display
+            temp.insert(0, CrmSetting.checkbox_html)
+            temp.append(CrmSetting.option_html)
+        return temp
 
     def add_view(self, request, *args, **kwargs):
         return HttpResponse('添加页面')
@@ -57,6 +96,8 @@ class CrmSetting(object):
 class CrmSite(object):
     def __init__(self):
         self._registry = {}
+        self.name = 'crm'
+        self.namespace = 'crm'
 
     def register(self, model, model_setting=None):
         if not model_setting:
@@ -84,7 +125,7 @@ class CrmSite(object):
 
     @property
     def urls(self):
-        return self.get_urls(), None, None
+        return self.get_urls(), self.name, self.namespace
 
 
 site = CrmSite()
