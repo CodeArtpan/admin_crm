@@ -1,7 +1,5 @@
 from crm.service import v1
 from . import models
-from django.utils.safestring import mark_safe
-from django.urls import reverse
 
 
 class Permission(object):

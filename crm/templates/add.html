@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>添加页面</title>
+    <link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.css">
+</head>
+<body>
+
+<div class="container">
+    <form method="post" class="form-horizontal">
+        {% csrf_token %}
+        {{ model_form_obj.as_p }}
+        <input type="submit" value="提交" class="btn btn-sm btn-primary">
+    </form>
+</div>
+
+</body>
+</html>

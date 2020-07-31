@@ -1,9 +1,11 @@
 from django.urls import path, re_path
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import render, HttpResponse, redirect
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from utils.page import Pagination
 import copy
+from django.forms import ModelForm
+from django.http import QueryDict
 
 
 class ChangeList(object):
@@ -17,7 +19,6 @@ class ChangeList(object):
         self.data_list = data_list
 
         request_get = copy.deepcopy(model_config_obj.request.GET)
-        request_get._mutable = True
         page = Pagination(
             current_page=model_config_obj.request.GET.get('page'),
             total_item_count=data_list.count(),
@@ -29,9 +30,12 @@ class ChangeList(object):
 
     def add_btn_html(self):
         add_html = '<a href="%s" class="btn btn-xs btn-success">添加</a>'
-        app_model_name = self.model_config_obj.model_class._meta.app_label, \
-                         self.model_config_obj.model_class._meta.model_name
-        add_url = reverse('crm:%s_%s_add' % app_model_name)
+        app_model_name = self.model_config_obj.app_label, self.model_config_obj.model_name
+        request_params = self.model_config_obj.request.GET.urlencode()
+        query_dict = QueryDict(mutable=True)
+        query_dict['next_url_params'] = request_params
+        base_url = reverse('crm:%s_%s_add' % app_model_name)
+        add_url = base_url + '?' + query_dict.urlencode()
         return mark_safe(add_html % add_url)
 
 
@@ -42,10 +46,16 @@ class CrmSetting(object):
     list_display = []
     show_add_btn = True
     actions = []
+    model_form_class = None
 
     def __init__(self, model_class, crm_site):
         self.model_class = model_class
         self.crm_site = crm_site
+        self.app_label = self.model_class._meta.app_label
+        self.model_name = self.model_class._meta.model_name
+
+    def get_reverse_changelist_url(self):
+        return reverse('crm:%s_%s_changelist' % (self.app_label, self.model_name))
 
     def changelist_view(self, request, *args, **kwargs):
         self.request = request
@@ -94,8 +104,32 @@ class CrmSetting(object):
         temp += self.actions
         return temp
 
+    @property
+    def get_model_form_class(self):
+        model_form_class = self.model_form_class
+        if not model_form_class:
+            class DefaultModelForm(ModelForm):
+                class Meta:
+                    model = self.model_class
+                    fields = '__all__'
+            model_form_class = DefaultModelForm
+        return model_form_class
+
     def add_view(self, request, *args, **kwargs):
-        return HttpResponse('添加页面')
+        self.request = request
+        params = request.GET.get('next_url_params')
+        changelist_url = self.get_reverse_changelist_url() + '?' + params
+        if request.method == 'GET':
+            model_form_obj = self.get_model_form_class()
+            context = {'model_form_obj': model_form_obj}
+            return render(request, 'add.html', context)
+        elif request.method == 'POST':
+            model_form_obj = self.get_model_form_class(request.POST)
+            if model_form_obj.is_valid():
+                model_form_obj.save()
+                return redirect(changelist_url)
+            context = {'model_form_obj': model_form_obj}
+            return render(request, 'add.html', context)
 
     def delete_view(self, request, *args, **kwargs):
         return HttpResponse('删除页面')
@@ -104,7 +138,7 @@ class CrmSetting(object):
         return HttpResponse('修改页面')
 
     def get_urls(self):
-        app_model_name = self.model_class._meta.app_label, self.model_class._meta.model_name
+        app_model_name = self.app_label, self.model_name
         url_patterns = [
             re_path(r'^$', self.changelist_view, name='%s_%s_changelist' % app_model_name),
             re_path(r'^add/$', self.add_view, name='%s_%s_add' % app_model_name),
