@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <title>数据列表</title>
     <link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.css">
+    <script src="/static/jquery-3.4.1.js"></script>
+    <script src="/static/bootstrap-3.3.7/js/bootstrap.js"></script>
 </head>
 <body>
 
@@ -14,10 +16,9 @@
         {% show_action_list cl %}
         {% if cl.model_config_obj.get_show_add_btn %}
             {{ cl.add_btn_html }}
-        {% endif %} 
+        {% endif %}
         {% show_data_list cl %}
     </form>
-
     <ul class="pagination">
         {{ cl.page_html }}
     </ul>

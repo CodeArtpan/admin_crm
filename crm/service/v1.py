@@ -12,6 +12,7 @@ class ChangeList(object):
     """
     分装列表页面需要的数据
     """
+
     def __init__(self, data_list, model_config_obj):
         self.model_config_obj = model_config_obj
         self.list_display = model_config_obj.get_list_display()
@@ -31,11 +32,9 @@ class ChangeList(object):
     def add_btn_html(self):
         add_html = '<a href="%s" class="btn btn-xs btn-success">添加</a>'
         app_model_name = self.model_config_obj.app_label, self.model_config_obj.model_name
-        request_params = self.model_config_obj.request.GET.urlencode()
-        query_dict = QueryDict(mutable=True)
-        query_dict['next_url_params'] = request_params
+        url_params = self.model_config_obj.get_changelist_url_params()
         base_url = reverse('crm:%s_%s_add' % app_model_name)
-        add_url = base_url + '?' + query_dict.urlencode()
+        add_url = '%s?%s' % (base_url, url_params)
         return mark_safe(add_html % add_url)
 
 
@@ -57,6 +56,12 @@ class CrmSetting(object):
     def get_reverse_changelist_url(self):
         return reverse('crm:%s_%s_changelist' % (self.app_label, self.model_name))
 
+    def get_changelist_url_params(self):
+        request_params = self.request.GET.urlencode()
+        query_dict = QueryDict(mutable=True)
+        query_dict['changelist_url_params'] = request_params
+        return query_dict.urlencode()
+
     def changelist_view(self, request, *args, **kwargs):
         self.request = request
         if request.method == 'POST':
@@ -77,9 +82,13 @@ class CrmSetting(object):
     def option_html(self, obj=None, is_header=False):
         if is_header:
             return '操作'
+        base_edit_url = reverse('crm:%s_%s_change' % (self.app_label, self.model_name), args=(obj.pk,))
+        base_del_url = reverse('crm:%s_%s_delete' % (self.app_label, self.model_name), args=(obj.pk,))
+        url_params = self.get_changelist_url_params()
+        edit_url = '%s?%s' % (base_edit_url, url_params)
+        del_url = '%s?%s' % (base_del_url, url_params)
         tpl = "<a href='%s' class='btn btn-xs btn-info'>编辑</a> |  \
-               <a href='%s' class='btn btn-xs btn-danger'>删除</a>"\
-            % (reverse('crm:app01_userinfo_change', args=(obj.pk,)), reverse('crm:app01_userinfo_delete', args=(obj.pk,)))
+               <a href='%s' class='btn btn-xs btn-danger'>删除</a>" % (edit_url, del_url)
         return mark_safe(tpl)
 
     def get_list_display(self):
@@ -94,7 +103,7 @@ class CrmSetting(object):
         return self.show_add_btn
 
     def multi_del(self):
-        pk_list = [int(pk)for pk in self.request.POST.getlist('pk')]
+        pk_list = [int(pk) for pk in self.request.POST.getlist('pk')]
         self.model_class.objects.filter(id__in=pk_list).delete()
 
     multi_del.short_desc = '批量删除'
@@ -117,25 +126,46 @@ class CrmSetting(object):
 
     def add_view(self, request, *args, **kwargs):
         self.request = request
-        params = request.GET.get('next_url_params')
-        changelist_url = self.get_reverse_changelist_url() + '?' + params
+        params = request.GET.get('changelist_url_params')
+        changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
+            self.get_reverse_changelist_url()
         if request.method == 'GET':
             model_form_obj = self.get_model_form_class()
             context = {'model_form_obj': model_form_obj}
-            return render(request, 'add.html', context)
-        elif request.method == 'POST':
-            model_form_obj = self.get_model_form_class(request.POST)
-            if model_form_obj.is_valid():
-                model_form_obj.save()
-                return redirect(changelist_url)
+            return render(request, 'add_edit.html', context)
+        model_form_obj = self.get_model_form_class(request.POST)
+        if model_form_obj.is_valid():
+            model_form_obj.save()
+            return redirect(changelist_url)
+        context = {'model_form_obj': model_form_obj}
+        return render(request, 'add_edit.html', context)
+
+    def delete_view(self, request, pk, *args, **kwargs):
+        self.request = request
+        params = request.GET.get('changelist_url_params')
+        changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
+            self.get_reverse_changelist_url()
+        self.model_class.objects.filter(pk=pk).delete()
+        return redirect(changelist_url)
+
+    def change_view(self, request, pk, *args, **kwargs):
+        self.request = request
+        params = request.GET.get('changelist_url_params')
+        changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
+            self.get_reverse_changelist_url()
+        obj = self.model_class.objects.filter(pk=pk).first()
+        if not obj:
+            return redirect(changelist_url)
+        if request.method == 'GET':
+            model_form_obj = self.get_model_form_class(instance=obj)
             context = {'model_form_obj': model_form_obj}
-            return render(request, 'add.html', context)
-
-    def delete_view(self, request, *args, **kwargs):
-        return HttpResponse('删除页面')
-
-    def change_view(self, request, *args, **kwargs):
-        return HttpResponse('修改页面')
+            return render(request, 'add_edit.html', context)
+        model_form_obj = self.get_model_form_class(request.POST, instance=obj)
+        if model_form_obj.is_valid():
+            model_form_obj.save()
+            return redirect(changelist_url)
+        context = {'model_form_obj': model_form_obj}
+        return render(request, 'add_edit.html', context)
 
     def get_urls(self):
         app_model_name = self.app_label, self.model_name
@@ -158,6 +188,10 @@ class CrmSetting(object):
 
 
 class CrmSite(object):
+    """
+    路由构建与分发
+    """
+
     def __init__(self):
         self._registry = {}
         self.name = 'crm'
