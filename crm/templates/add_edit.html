@@ -10,8 +10,19 @@
 <div class="container">
     <form method="post" class="form-horizontal">
         {% csrf_token %}
-        {{ model_form_obj.as_p }}
-        <input type="submit" value="提交" class="btn btn-sm btn-primary">
+        {% for item in model_form_obj %}
+            <div class="form-group">
+                <label class="col-sm-1 control-label">{{ item.label }}</label>
+                <div class="col-sm-5" style="position: relative">{{ item }}</div>
+            </div>
+        {% endfor %}
+
+        <div class="form-group">
+            <div class="col-sm-offset-5 col-sm-2">
+                <input type="submit" value="提交" class="btn btn-sm btn-default">
+            </div>
+        </div>
+
     </form>
 </div>
 

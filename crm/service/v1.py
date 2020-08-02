@@ -190,6 +190,7 @@ class CrmSetting(object):
 class CrmSite(object):
     """
     路由构建与分发
+    注册类及其类配置
     """
 
     def __init__(self):
