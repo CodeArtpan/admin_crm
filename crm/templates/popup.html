@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>正在返回</title>
+</head>
+<body>
+<script>
+    (function () {
+        let tag_id = '{{ tag_id }}';
+        let val = '{{ val }}';
+        let text = '{{ text.0 }}';
+        window.opener.add(tag_id, val, text);
+        window.close()
+    })()
+</script>
+</body>
+</html>

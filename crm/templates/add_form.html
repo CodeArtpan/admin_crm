@@ -1,0 +1,35 @@
+<form method="post" class="form-horizontal">
+    {% csrf_token %}
+    {% for item in model_form_obj %}
+        <div class="form-group">
+            <label class="col-sm-1 control-label">{{ item.tag.label }}</label>
+            <div class="col-sm-5" style="position: relative">
+                {{ item.tag }}
+                {% if item.has_popup %}
+                    <a class="btn btn-xs btn-info" id="add_ug" onclick="openPopup('{{ item.popup_url }}')">添加</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+
+    <div class="form-group">
+        <div class="col-sm-offset-5 col-sm-2">
+            <input type="submit" value="提交" class="btn btn-sm btn-default">
+        </div>
+    </div>
+</form>
+
+<script>
+    function openPopup(url) {
+        window.open(url, url, 'width:500, height:300')
+    }
+
+    function add(tag_id, val, text) {
+        let tag = document.getElementById(tag_id);
+        let op = document.createElement('option');
+        op.innerText = text;
+        op.setAttribute('value', val);
+        op.setAttribute('selected', 'selected');
+        tag.appendChild(op)
+    }
+</script>

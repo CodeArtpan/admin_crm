@@ -127,18 +127,27 @@ class CrmSetting(object):
     def add_view(self, request, *args, **kwargs):
         self.request = request
         params = request.GET.get('changelist_url_params')
+        tag_id = request.GET.get('_popup')
         changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
             self.get_reverse_changelist_url()
         if request.method == 'GET':
             model_form_obj = self.get_model_form_class()
             context = {'model_form_obj': model_form_obj}
-            return render(request, 'add_edit.html', context)
+            return render(request, 'add.html', context)
         model_form_obj = self.get_model_form_class(request.POST)
         if model_form_obj.is_valid():
-            model_form_obj.save()
-            return redirect(changelist_url)
+            """判断是否为popup提交"""
+            if not tag_id:
+                model_form_obj.save()
+                return redirect(changelist_url)
+            context = {'tag_id': tag_id, 'val': None, 'text': []}
+            for item in model_form_obj:
+                context['text'].append(item.data)
+            obj = model_form_obj.save()
+            context['val'] = obj.pk
+            return render(request, 'popup.html', context)
         context = {'model_form_obj': model_form_obj}
-        return render(request, 'add_edit.html', context)
+        return render(request, 'add.html', context)
 
     def delete_view(self, request, pk, *args, **kwargs):
         self.request = request
@@ -159,13 +168,13 @@ class CrmSetting(object):
         if request.method == 'GET':
             model_form_obj = self.get_model_form_class(instance=obj)
             context = {'model_form_obj': model_form_obj}
-            return render(request, 'add_edit.html', context)
+            return render(request, 'edit.html', context)
         model_form_obj = self.get_model_form_class(request.POST, instance=obj)
         if model_form_obj.is_valid():
             model_form_obj.save()
             return redirect(changelist_url)
         context = {'model_form_obj': model_form_obj}
-        return render(request, 'add_edit.html', context)
+        return render(request, 'edit.html', context)
 
     def get_urls(self):
         app_model_name = self.app_label, self.model_name

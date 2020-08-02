@@ -10,7 +10,7 @@ class Permission(object):
 
 
 class UserInfoConfig(v1.CrmSetting):
-    list_display = ['id', 'username', 'password']
+    list_display = ['id', 'username', 'password', 'ug']
 
     def initial(self):
         pass
@@ -29,9 +29,14 @@ class UserInfoConfig(v1.CrmSetting):
     model_form_class = UserInfoModelForm
 
 
-class UserGroupConfig(Permission, v1.CrmSetting):
+class RoleConfig(v1.CrmSetting):
+    list_display = ['id', 'caption']
+
+
+class UgConfig(v1.CrmSetting):
     list_display = ['id', 'title']
 
 
 v1.site.register(models.UserInfo, UserInfoConfig)
-v1.site.register(models.UserGroup, UserGroupConfig)
+v1.site.register(models.Role, RoleConfig)
+v1.site.register(models.UserGroup, UgConfig)
