@@ -6,6 +6,69 @@ from utils.page import Pagination
 import copy
 from django.forms import ModelForm
 from django.http import QueryDict
+from types import FunctionType
+
+
+class FilterOptionConfig(object):
+    def __init__(self, name_or_func, is_multi=False):
+        self.name_or_func = name_or_func
+        self.is_multi = is_multi
+
+    @property
+    def is_func(self):
+        if isinstance(self.name_or_func, FunctionType):
+            return True
+
+    @property
+    def name(self):
+        if isinstance(self.name_or_func, FunctionType):
+            return self.name_or_func.__name__
+        return self.name_or_func
+
+
+class FilterTag(object):
+    def __init__(self, data_list, request_params, option):
+        self.data_list = data_list
+        self.request_params = copy.deepcopy(request_params)
+        self.request_params._mutable = True
+        self.option = option
+
+    def __iter__(self):
+        if self.option.is_multi:
+            current_pk_or_list = self.request_params.getlist(self.option.name)
+        else:
+            current_pk_or_list = self.request_params.get(self.option.name)
+        if current_pk_or_list:
+            self.request_params.pop(self.option.name)
+            url = self.request_params.urlencode()
+            yield mark_safe('<a href="?{}" class="btn btn-xs btn-default">全部</a>'.format(url))
+        else:
+            url = self.request_params.urlencode()
+            yield mark_safe('<a href="?{}" class="btn btn-xs btn-warning">全部</a>'.format(url))
+
+        for obj in self.data_list:
+            if self.option.is_multi:
+                if obj.pk not in current_pk_or_list:
+                    temp = []
+                    temp.extend(current_pk_or_list)
+                    temp.append(obj.pk)
+                    self.request_params.setlist(self.option.name, temp)
+            else:
+                self.request_params[self.option.name] = obj.pk
+
+            url = self.request_params.urlencode()
+
+            if self.option.is_multi:
+                if str(obj.pk) in current_pk_or_list:
+                    tpl = '<a href="?{}" class="btn btn-xs btn-warning">{}</a>'.format(url, str(obj))
+                else:
+                    tpl = '<a href="?{}" class="btn btn-xs btn-default">{}</a>'.format(url, str(obj))
+            else:
+                if current_pk_or_list == str(obj.pk):
+                    tpl = '<a href="?{}" class="btn btn-xs btn-warning">{}</a>'.format(url, str(obj))
+                else:
+                    tpl = '<a href="?{}" class="btn btn-xs btn-default">{}</a>'.format(url, str(obj))
+            yield mark_safe(tpl)
 
 
 class ChangeList(object):
@@ -18,6 +81,7 @@ class ChangeList(object):
         self.list_display = model_config_obj.get_list_display()
         self.actions = model_config_obj.get_actions()
         self.data_list = data_list
+        self.list_filter = model_config_obj.get_list_filter()
 
         request_get = copy.deepcopy(model_config_obj.request.GET)
         page = Pagination(
@@ -37,6 +101,20 @@ class ChangeList(object):
         add_url = '%s?%s' % (base_url, url_params)
         return mark_safe(add_html % add_url)
 
+    def gen_list_filter(self):
+        model_class = self.model_config_obj.model_class
+        request_params = self.model_config_obj.request.GET
+        for option in self.list_filter:
+            from django.db.models.fields.related import RelatedField
+            field_obj = model_class._meta.get_field(option.name)
+            if isinstance(field_obj, RelatedField):
+                field_related_class = field_obj.related_model
+                data_list = field_related_class.objects.all()
+            else:
+                data_list = model_class.objects.all()
+            filter_tag = FilterTag(data_list, request_params, option)
+            yield filter_tag
+
 
 class CrmSetting(object):
     """
@@ -46,6 +124,7 @@ class CrmSetting(object):
     show_add_btn = True
     actions = []
     model_form_class = None
+    list_filter = []
 
     def __init__(self, model_class, crm_site):
         self.model_class = model_class
@@ -112,6 +191,9 @@ class CrmSetting(object):
         temp = [CrmSetting.multi_del, ]
         temp += self.actions
         return temp
+
+    def get_list_filter(self):
+        return self.list_filter
 
     @property
     def get_model_form_class(self):

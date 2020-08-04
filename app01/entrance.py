@@ -27,6 +27,10 @@ class UserInfoConfig(v1.CrmSetting):
             }
 
     model_form_class = UserInfoModelForm
+    list_filter = [
+        v1.FilterOptionConfig('ug', True),
+        v1.FilterOptionConfig('roles', False),
+    ]
 
 
 class RoleConfig(v1.CrmSetting):

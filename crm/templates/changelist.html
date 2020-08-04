@@ -11,6 +11,16 @@
 <body>
 
 <div class="container">
+    <!--组合搜索开始-->
+    {% for filter_tag_obj in  cl.gen_list_filter%}
+        <div style="padding-top: 3px;padding-bottom: 3px">
+            {% for tag in filter_tag_obj %}
+                {{ tag }}
+            {% endfor %}
+        </div>
+    {% endfor %}
+    <!--组合搜索结束-->
+
     <form method="post" class="form-horizontal">
         {% csrf_token %}
         {% show_action_list cl %}
