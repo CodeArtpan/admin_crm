@@ -10,9 +10,11 @@ from types import FunctionType
 
 
 class FilterOptionConfig(object):
-    def __init__(self, name_or_func, is_multi=False):
+    def __init__(self, name_or_func, is_multi=False, text_func_name=None, val_func_name=None):
         self.name_or_func = name_or_func
         self.is_multi = is_multi
+        self.text_func_name = text_func_name
+        self.val_func_name = val_func_name
 
     @property
     def is_func(self):
@@ -34,40 +36,45 @@ class FilterTag(object):
         self.option = option
 
     def __iter__(self):
-        if self.option.is_multi:
-            current_pk_or_list = self.request_params.getlist(self.option.name)
-        else:
-            current_pk_or_list = self.request_params.get(self.option.name)
-        if current_pk_or_list:
-            self.request_params.pop(self.option.name)
+        if self.option.name in self.request_params:
+            pop_value = self.request_params.pop(self.option.name)
             url = self.request_params.urlencode()
+            self.request_params.setlist(self.option.name, pop_value)
             yield mark_safe('<a href="?{}" class="btn btn-xs btn-default">全部</a>'.format(url))
         else:
             url = self.request_params.urlencode()
             yield mark_safe('<a href="?{}" class="btn btn-xs btn-warning">全部</a>'.format(url))
 
         for obj in self.data_list:
-            if self.option.is_multi:
-                if obj.pk not in current_pk_or_list:
-                    temp = []
-                    temp.extend(current_pk_or_list)
-                    temp.append(obj.pk)
-                    self.request_params.setlist(self.option.name, temp)
-            else:
-                self.request_params[self.option.name] = obj.pk
+            request_params = copy.deepcopy(self.request_params)
 
-            url = self.request_params.urlencode()
+            # url上要传递的值
+            pk = self.option.val_func_name(obj) if self.option.val_func_name else obj.pk
+            pk = str(pk)
+
+            # a标签上显示的内容
+            text = self.option.text_func_name(obj) if self.option.text_func_name else str(obj)
+
+            exist = False
+            if pk in request_params.getlist(self.option.name):
+                exist = True
 
             if self.option.is_multi:
-                if str(obj.pk) in current_pk_or_list:
-                    tpl = '<a href="?{}" class="btn btn-xs btn-warning">{}</a>'.format(url, str(obj))
+                if exist:
+                    values_list = request_params.getlist(self.option.name)
+                    values_list.remove(pk)
+                    request_params.setlist(self.option.name, values_list)
                 else:
-                    tpl = '<a href="?{}" class="btn btn-xs btn-default">{}</a>'.format(url, str(obj))
+                    request_params.appendlist(self.option.name, pk)
             else:
-                if current_pk_or_list == str(obj.pk):
-                    tpl = '<a href="?{}" class="btn btn-xs btn-warning">{}</a>'.format(url, str(obj))
-                else:
-                    tpl = '<a href="?{}" class="btn btn-xs btn-default">{}</a>'.format(url, str(obj))
+                request_params[self.option.name] = pk
+
+            url = request_params.urlencode()
+
+            if exist:
+                tpl = '<a href="?{}" class="btn btn-xs btn-warning">{}</a>'.format(url, text)
+            else:
+                tpl = '<a href="?{}" class="btn btn-xs btn-default">{}</a>'.format(url, text)
             yield mark_safe(tpl)
 
 
@@ -105,13 +112,16 @@ class ChangeList(object):
         model_class = self.model_config_obj.model_class
         request_params = self.model_config_obj.request.GET
         for option in self.list_filter:
-            from django.db.models.fields.related import RelatedField
-            field_obj = model_class._meta.get_field(option.name)
-            if isinstance(field_obj, RelatedField):
-                field_related_class = field_obj.related_model
-                data_list = field_related_class.objects.all()
+            if option.is_func:
+                data_list = option.name_or_func(self)
             else:
-                data_list = model_class.objects.all()
+                from django.db.models.fields.related import RelatedField
+                field_obj = model_class._meta.get_field(option.name)
+                if isinstance(field_obj, RelatedField):
+                    field_related_class = field_obj.related_model
+                    data_list = field_related_class.objects.all()
+                else:
+                    data_list = model_class.objects.all()
             filter_tag = FilterTag(data_list, request_params, option)
             yield filter_tag
 
