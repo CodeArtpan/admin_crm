@@ -1,30 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>编辑页面</title>
-    <link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.css">
-</head>
-<body>
+{% extends 'layout.html' %}
 
-<div class="container">
-    <form method="post" class="form-horizontal">
-        {% csrf_token %}
-        {% for item in model_form_obj %}
+{% block title %}
+    编辑页面
+{% endblock %}
+
+{% block css %}
+    <style>
+        .container {
+            margin-top: 5px;
+            margin-left: 5px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            {% for item in model_form_obj %}
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">{{ item.label }}</label>
+                    <div class="col-sm-5" style="position: relative">{{ item }}</div>
+                </div>
+            {% endfor %}
+
             <div class="form-group">
-                <label class="col-sm-1 control-label">{{ item.label }}</label>
-                <div class="col-sm-5" style="position: relative">{{ item }}</div>
+                <div class="col-sm-offset-5 col-sm-2">
+                    <input type="submit" value="提交" class="btn btn-sm btn-default">
+                </div>
             </div>
-        {% endfor %}
 
-        <div class="form-group">
-            <div class="col-sm-offset-5 col-sm-2">
-                <input type="submit" value="提交" class="btn btn-sm btn-default">
-            </div>
-        </div>
+        </form>
+    </div>
+{% endblock %}
 
-    </form>
-</div>
 
-</body>
-</html>

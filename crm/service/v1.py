@@ -2,11 +2,12 @@ from django.urls import path, re_path
 from django.shortcuts import render, HttpResponse, redirect
 from django.utils.safestring import mark_safe
 from django.urls import reverse
-from utils.page import Pagination
+from crm.utils.page import Pagination
 import copy
 from django.forms import ModelForm
 from django.http import QueryDict
 from types import FunctionType
+import functools
 
 
 class FilterOptionConfig(object):
@@ -152,7 +153,6 @@ class CrmSetting(object):
         return query_dict.urlencode()
 
     def changelist_view(self, request, *args, **kwargs):
-        self.request = request
         if request.method == 'POST':
             action_name = request.POST.get('action')
             action_func = getattr(self, action_name, None)
@@ -217,7 +217,6 @@ class CrmSetting(object):
         return model_form_class
 
     def add_view(self, request, *args, **kwargs):
-        self.request = request
         params = request.GET.get('changelist_url_params')
         tag_id = request.GET.get('_popup')
         changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
@@ -225,7 +224,9 @@ class CrmSetting(object):
         if request.method == 'GET':
             model_form_obj = self.get_model_form_class()
             context = {'model_form_obj': model_form_obj}
-            return render(request, 'add.html', context)
+            if not tag_id:
+                return render(request, 'add.html', context)
+            return render(request, 'popup_add.html', context)
         model_form_obj = self.get_model_form_class(request.POST)
         if model_form_obj.is_valid():
             """判断是否为popup提交"""
@@ -242,7 +243,6 @@ class CrmSetting(object):
         return render(request, 'add.html', context)
 
     def delete_view(self, request, pk, *args, **kwargs):
-        self.request = request
         params = request.GET.get('changelist_url_params')
         changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
             self.get_reverse_changelist_url()
@@ -250,7 +250,6 @@ class CrmSetting(object):
         return redirect(changelist_url)
 
     def change_view(self, request, pk, *args, **kwargs):
-        self.request = request
         params = request.GET.get('changelist_url_params')
         changelist_url = '%s?%s' % (self.get_reverse_changelist_url(), params) if params else \
             self.get_reverse_changelist_url()
@@ -268,13 +267,20 @@ class CrmSetting(object):
         context = {'model_form_obj': model_form_obj}
         return render(request, 'edit.html', context)
 
+    def wrapper(self, func):
+        @functools.wraps(func)
+        def inner(request, *args, **kwargs):
+            self.request = request
+            return func(request, *args, **kwargs)
+        return inner
+
     def get_urls(self):
         app_model_name = self.app_label, self.model_name
         url_patterns = [
-            re_path(r'^$', self.changelist_view, name='%s_%s_changelist' % app_model_name),
-            re_path(r'^add/$', self.add_view, name='%s_%s_add' % app_model_name),
-            re_path(r'^(.+)/delete/$', self.delete_view, name='%s_%s_delete' % app_model_name),
-            re_path(r'^(.+)/change/$', self.change_view, name='%s_%s_change' % app_model_name),
+            re_path(r'^$', self.wrapper(self.changelist_view), name='%s_%s_changelist' % app_model_name),
+            re_path(r'^add/$', self.wrapper(self.add_view), name='%s_%s_add' % app_model_name),
+            re_path(r'^(.+)/delete/$', self.wrapper(self.delete_view), name='%s_%s_delete' % app_model_name),
+            re_path(r'^(.+)/change/$', self.wrapper(self.change_view), name='%s_%s_change' % app_model_name),
         ]
         url_patterns += self.extra_urls()
         return url_patterns

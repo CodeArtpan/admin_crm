@@ -1,16 +1,21 @@
+{% extends 'layout.html' %}
 {% load add_form_data %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>添加页面</title>
-    <link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.css">
-</head>
-<body>
 
-<div class="container">
-    {% show_add_form_data model_form_obj %}
-</div>
+{% block title %}
+    添加页面
+{% endblock %}
 
-</body>
-</html>
+{% block css %}
+    <style>
+        .container {
+            margin-top: 5px;
+            margin-left: 5px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        {% show_add_form_data model_form_obj %}
+    </div>
+{% endblock %}

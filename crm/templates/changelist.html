@@ -1,38 +1,47 @@
+{% extends 'layout.html' %}
+{% load static %}
 {% load data_list %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>数据列表</title>
-    <link rel="stylesheet" href="/static/bootstrap-3.3.7/css/bootstrap.css">
-    <script src="/static/jquery-3.4.1.js"></script>
-    <script src="/static/bootstrap-3.3.7/js/bootstrap.js"></script>
-</head>
-<body>
 
-<div class="container">
-    <!--组合搜索开始-->
-    {% for filter_tag_obj in  cl.gen_list_filter%}
-        <div style="padding-top: 3px;padding-bottom: 3px">
-            {% for tag in filter_tag_obj %}
-                {{ tag }}
-            {% endfor %}
-        </div>
-    {% endfor %}
-    <!--组合搜索结束-->
+{% block title %}数据列表{% endblock %}
 
-    <form method="post" class="form-horizontal">
-        {% csrf_token %}
-        {% show_action_list cl %}
-        {% if cl.model_config_obj.get_show_add_btn %}
-            {{ cl.add_btn_html }}
-        {% endif %}
-        {% show_data_list cl %}
-    </form>
-    <ul class="pagination">
-        {{ cl.page_html }}
-    </ul>
-</div>
+{% block css %}
+    <style>
+        .container {
+            margin-top: 20px;
+            margin-left: 5px;
+        }
+    </style>
+{% endblock %}
 
-</body>
-</html>
+{% block breadcrumb %}
+    <ol class="breadcrumb">
+        <li><a href="#">首页</a></li>
+        <li class="active">数据列表</li>
+    </ol>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <!--组合搜索开始-->
+        {% for filter_tag_obj in  cl.gen_list_filter %}
+            <div style="padding-top: 3px;padding-bottom: 3px">
+                {% for tag in filter_tag_obj %}
+                    {{ tag }}
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <!--组合搜索结束-->
+
+        <form method="post" class="form-horizontal">
+            {% csrf_token %}
+            {% show_action_list cl %}
+            {% if cl.model_config_obj.get_show_add_btn %}
+                {{ cl.add_btn_html }}
+            {% endif %}
+            {% show_data_list cl %}
+        </form>
+        <ul class="pagination">
+            {{ cl.page_html }}
+        </ul>
+    </div>
+{% endblock %}
